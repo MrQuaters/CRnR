@@ -9,12 +9,10 @@ DataExtractor::DataExtractor(const ImgTemplate* t) noexcept {
 	imgparams = *t;
 }
 
-void rtr::DataExtractor::_shadow_remover(cv::Mat&){
-	return;
-}
 
 void DataExtractor::_binarise(cv::Mat& t){
-	cv::threshold(t, t, 40, 255, cv::THRESH_BINARY);
+	cv::GaussianBlur(t, t, cv::Size(5, 5), 0);
+	cv::threshold(t, t, 0, 255, cv::THRESH_BINARY|cv::THRESH_OTSU);
 }
 
 void DataExtractor::_geom_restore(cv::Mat& g){
@@ -148,22 +146,38 @@ cv::Point2i DataExtractor::_mfinder(const cv::Mat& k, int* ct) {
 	return rpt;
 }
 
+void DataExtractor::_geom_wrap_prespective(cv::Mat& mt, _corners cn){
+	std::vector<cv::Point2f> gtp = {
+		cv::Point2f(0,0),
+		cv::Point2f(imgparams.MARKER_TO_MARKER_WIDTH_PIX, 0),
+		cv::Point2f(imgparams.MARKER_TO_MARKER_WIDTH_PIX, imgparams.MARKER_TO_MARKER_HEIGHT_PIX),
+		cv::Point2f(0, imgparams.MARKER_TO_MARKER_HEIGHT_PIX)
+	};
+	std::vector<cv::Point2f> gtn = {
+		cv::Point2f(cn.lt.x -imgparams.MARKER_WIDTH_PIX/2, cn.lt.y - imgparams.MARKER_WIDTH_PIX / 2),
+		cv::Point2f(cn.rt.x + imgparams.MARKER_WIDTH_PIX / 2, cn.rt.y - imgparams.MARKER_WIDTH_PIX / 2),
+		cv::Point2f(cn.rb.x + imgparams.MARKER_WIDTH_PIX / 2, cn.rb.y + imgparams.MARKER_WIDTH_PIX / 2),
+		cv::Point2f(cn.lb.x - imgparams.MARKER_WIDTH_PIX / 2, cn.lb.y + imgparams.MARKER_WIDTH_PIX / 2)
+	};
+	auto hg = cv::findHomography(gtn, gtp);
+	cv::warpPerspective(mt, mt, hg, cv::Size2i(imgparams.MARKER_TO_MARKER_WIDTH_PIX, imgparams.MARKER_TO_MARKER_HEIGHT_PIX));
+}
+
+void DataExtractor::_final_binarisation(cv::Mat& t){
+	cv::adaptiveThreshold(t, t, 255, cv::THRESH_BINARY, cv::ADAPTIVE_THRESH_GAUSSIAN_C, 3, 0);
+}
 
 
-
+static int gdsf = 0;
 
 std::vector<extrdata> rtr::DataExtractor::data_extract(const cv::Mat& t){
 	cv::Mat vm = t;
-
 	_gateway(vm); // using gateway to prepare image
-	if (imgparams.IMAGE_TYPE != SCANED_IMAGE) _shadow_remover(vm); // if givven image is not scanned, using shadow remover for better quality
-	_geom_restore(vm);
-	auto r = _corner_marker_pos_detector(vm);
-	cv::circle(vm, r.lb, 12, cv::Scalar(255));
-	cv::circle(vm, r.rb, 12, cv::Scalar(255));
-	cv::circle(vm, r.rt, 4, cv::Scalar(255));
-	cv::circle(vm, r.lt, 4, cv::Scalar(255));
-	cv::imwrite("afd.jpg", vm);
+	_binarise(vm);//binarisation for finding markers
+	_geom_restore(vm);// restoring position in space
+	auto r = _corner_marker_pos_detector(vm);//finding corner markers
+	_geom_wrap_prespective(vm, r);//wraping perspective
+	cv::imwrite("afd" + std::to_string(gdsf++)+".jpg", vm);
 	return std::vector<extrdata>();
 }
 

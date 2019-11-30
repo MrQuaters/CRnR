@@ -1,10 +1,14 @@
 #include "modules/dataextractor/dataextractor.h"
 
 int main() {
-	rtr::TestImgTemplate g;
+	rtr::TestImgTemplate g(300);
 	rtr::DataExtractor u(&g);
-	auto r = cv::imread("imforproc/20190424-112126005-006.jpg");
-	u.data_extract(r);
+	
+	//for (int i = 1; i < 8; ++i) {
+		//auto r = cv::imread("imforproc/"+std::to_string(i)+".jpg");
+	auto r = cv::imread("imforproc/1_300.jpg");
+		u.data_extract(r);
+	//}
 
 	int a = 0;
 	return 0;
