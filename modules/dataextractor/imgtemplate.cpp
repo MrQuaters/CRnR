@@ -18,6 +18,20 @@ rtr::TestImgTemplate::TestImgTemplate(int dpi){
 	MARKER_TO_MARKER_WIDTH_PIX = cm_to_pix(20.2184);
 	MARKER_TO_MARKER_HEIGHT_PIX = cm_to_pix(13.818);
 	LETTER_WIDTH_PIX = cm_to_pix(0.05);
-	
+	FREE_ZONE_PIX = cm_to_pix(0.2614);
+	d_data = {
+		data_for_detect(cm_to_pix(3.23),cm_to_pix(4.6), 11, cm_to_pix(0.55), cm_to_pix(0.71),cm_to_pix(0.12), IS_NUMBERS, "TELEPHON"),
+		data_for_detect(cm_to_pix(3.23),cm_to_pix(3.6808), 26, cm_to_pix(0.55), cm_to_pix(0.71),cm_to_pix(0.12), IS_TEXT, "otc")
+	};
 }
 
+rtr::data_for_detect::data_for_detect(int DATA_POS_X, int  DATA_POS_Y,int R_CNTS, int X_SIZ, int Y_SIZ, int RECT_MARGI, int DATA_TYP, std::string nm){
+	DATA_POS_X_PIX = DATA_POS_X;
+	DATA_POS_Y_PIX = DATA_POS_Y;
+	R_PARAMS.R_COUNTS = R_CNTS;
+	R_PARAMS.X_SIZE = X_SIZ;
+	R_PARAMS.Y_SIZE = Y_SIZ;
+	R_PARAMS.RECT_MARGIN = RECT_MARGI;
+	DATA_TYPE = DATA_TYP;
+	dname = nm;
+}

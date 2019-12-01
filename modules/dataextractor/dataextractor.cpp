@@ -10,12 +10,12 @@ DataExtractor::DataExtractor(const ImgTemplate* t) noexcept {
 }
 
 
-void DataExtractor::_binarise(cv::Mat& t){
+void DataExtractor::_binarise(cv::Mat& t){ //binirasing by OTSU thresholding
 	cv::GaussianBlur(t, t, cv::Size(5, 5), 0);
 	cv::threshold(t, t, 0, 255, cv::THRESH_BINARY|cv::THRESH_OTSU);
 }
 
-void DataExtractor::_geom_restore(cv::Mat& g){
+void DataExtractor::_geom_restore(cv::Mat& g){ //restoring geometry if no geom marker in setted position, should rotate image
 	int ctl, ctr;
 	int gt = imgparams.GEOM_MARKER_POS_Y_PIX - imgparams.MARKER_WHITESPACE_HEIGHT_PIX / 2;
 	if (gt < 0) gt = 0;
@@ -43,23 +43,23 @@ _corners DataExtractor::_corner_marker_pos_detector(const cv::Mat& g){
 
 	cv::Mat dmat = g(cv::Rect2i(cv::Point2i(0,0), cv::Point2i(imgparams.MARKER_WHITESPACE_WIDTH_PIX, imgparams.MARKER_WHITESPACE_HEIGHT_PIX)));
 	auto k = _mfinder(dmat);
-	crn.lt = k;
+	crn.lt = k;//left top corner
 
 	dmat = g(cv::Rect2i(cv::Point2i(0, g.rows - 1 - imgparams.MARKER_WHITESPACE_HEIGHT_PIX), cv::Point2i(imgparams.MARKER_WHITESPACE_WIDTH_PIX, g.rows-1)));
 	k = _mfinder(dmat);
 	k.y += g.rows - 1 - imgparams.MARKER_WHITESPACE_HEIGHT_PIX;
-	crn.lb = k;
+	crn.lb = k;//left bot
 
 	dmat = g(cv::Rect2i(cv::Point2i(g.cols - 1 - imgparams.MARKER_WHITESPACE_WIDTH_PIX, 0), cv::Point2i(g.cols - 1, imgparams.MARKER_WHITESPACE_HEIGHT_PIX)));
 	k = _mfinder(dmat);
 	k.x += g.cols - 1 - imgparams.MARKER_WHITESPACE_WIDTH_PIX;
-	crn.rt = k;
+	crn.rt = k;//right top corner
 
 	dmat = g(cv::Rect2i(cv::Point2i(g.cols - 1 - imgparams.MARKER_WHITESPACE_WIDTH_PIX, g.rows - 1 - imgparams.MARKER_WHITESPACE_HEIGHT_PIX), cv::Point2i(g.cols - 1, g.rows - 1)));
 	k = _mfinder(dmat);
 	k.x += g.cols - 1 - imgparams.MARKER_WHITESPACE_WIDTH_PIX;
 	k.y += g.rows - 1 - imgparams.MARKER_WHITESPACE_HEIGHT_PIX;
-	crn.rb = k;
+	crn.rb = k;//left bot corner
 
 	return crn;
 }
@@ -142,18 +142,18 @@ cv::Point2i DataExtractor::_mfinder(const cv::Mat& k, int* ct) {
 	return rpt;
 }
 
-void DataExtractor::_geom_wrap_prespective(cv::Mat& mt, _corners cn){
+void DataExtractor::_geom_wrap_prespective(cv::Mat& mt, _corners cn){//wraping perspective to restore geometry
 	std::vector<cv::Point2f> gtp = {
-		cv::Point2f(0,0),
-		cv::Point2f(imgparams.MARKER_TO_MARKER_WIDTH_PIX, 0),
-		cv::Point2f(imgparams.MARKER_TO_MARKER_WIDTH_PIX, imgparams.MARKER_TO_MARKER_HEIGHT_PIX),
-		cv::Point2f(0, imgparams.MARKER_TO_MARKER_HEIGHT_PIX)
+		cv::Point2f((float)0,(float)0),
+		cv::Point2f((float)(imgparams.MARKER_TO_MARKER_WIDTH_PIX), (float)0),
+		cv::Point2f((float)(imgparams.MARKER_TO_MARKER_WIDTH_PIX), (float)(imgparams.MARKER_TO_MARKER_HEIGHT_PIX)),
+		cv::Point2f((float)0, (float)(imgparams.MARKER_TO_MARKER_HEIGHT_PIX))
 	};
 	std::vector<cv::Point2f> gtn = {
-		cv::Point2f(cn.lt.x -imgparams.MARKER_WIDTH_PIX/2, cn.lt.y - imgparams.MARKER_WIDTH_PIX / 2),
-		cv::Point2f(cn.rt.x + imgparams.MARKER_WIDTH_PIX / 2, cn.rt.y - imgparams.MARKER_WIDTH_PIX / 2),
-		cv::Point2f(cn.rb.x + imgparams.MARKER_WIDTH_PIX / 2, cn.rb.y + imgparams.MARKER_WIDTH_PIX / 2),
-		cv::Point2f(cn.lb.x - imgparams.MARKER_WIDTH_PIX / 2, cn.lb.y + imgparams.MARKER_WIDTH_PIX / 2)
+		cv::Point2f((float)(cn.lt.x -imgparams.MARKER_WIDTH_PIX/2), (float)(cn.lt.y - imgparams.MARKER_WIDTH_PIX / 2)),
+		cv::Point2f((float)(cn.rt.x + imgparams.MARKER_WIDTH_PIX / 2), (float)(cn.rt.y - imgparams.MARKER_WIDTH_PIX / 2)),
+		cv::Point2f((float)(cn.rb.x + imgparams.MARKER_WIDTH_PIX / 2), (float)(cn.rb.y + imgparams.MARKER_WIDTH_PIX / 2)),
+		cv::Point2f((float)(cn.lb.x - imgparams.MARKER_WIDTH_PIX / 2), (float)(cn.lb.y + imgparams.MARKER_WIDTH_PIX / 2))
 	};
 	auto hg = cv::findHomography(gtn, gtp);
 	cv::warpPerspective(mt, mt, hg, cv::Size2i(imgparams.MARKER_TO_MARKER_WIDTH_PIX, imgparams.MARKER_TO_MARKER_HEIGHT_PIX));
@@ -164,7 +164,137 @@ void DataExtractor::_final_binarisation(cv::Mat& t){
 }
 
 
-static int gdsf = 0;
+extrdata DataExtractor::_data_extract(cv::Mat& mt, const data_for_detect& d){
+	cv::Rect2i r;
+	r.x = d.DATA_POS_X_PIX - imgparams.FREE_ZONE_PIX / 2; 
+	r.y = d.DATA_POS_Y_PIX - imgparams.FREE_ZONE_PIX / 2;
+	r.width = d.R_PARAMS.R_COUNTS * d.R_PARAMS.X_SIZE + (d.R_PARAMS.R_COUNTS-1) * d.R_PARAMS.RECT_MARGIN + imgparams.FREE_ZONE_PIX/2;
+	r.height = d.R_PARAMS.Y_SIZE + imgparams.FREE_ZONE_PIX/2;
+	if (r.x + r.width > mt.cols) r.width = mt.cols - r.x;
+	
+#ifdef MODULAR_TEST_DATAEXTRACTOR
+	cv::rectangle(modular_test_matrix, r, cv::Scalar(0), 1);
+#endif // MODULAR_TEST_DATAEXTRACTOR
+
+	cv::Mat mtn = mt(r);//cutting image in givven place, with +- FREE_SPACE/2 to proccess errors of geometrical transformation
+
+	int* g = new int[mtn.cols]; // counting black pixels for each coll
+	int xgmval = 0;
+	for (int i = 0; i < mtn.cols; ++i) { 
+		int ctn = 0;
+		for (int j = 0; j < mtn.rows; ++j) {
+			if (mtn.at<uchar>(j, i) == 0) { 
+				ctn++;
+			}
+		}
+		xgmval = (xgmval > ctn) ? xgmval : ctn;
+		g[i] = ctn; 
+	}
+	//finding center position of letters
+	int nxtpt = 0;
+	int ac = (imgparams.FREE_ZONE_PIX - d.R_PARAMS.RECT_MARGIN) / 2;
+	int bpt = 0;
+	std::vector<int> xpicslist(d.R_PARAMS.R_COUNTS, 0);
+	
+	for (int i = 0; i < d.R_PARAMS.R_COUNTS; ++i) {//foreach lettter
+		nxtpt = bpt + d.R_PARAMS.X_SIZE + d.R_PARAMS.RECT_MARGIN + ac;//next step calc by last step
+		int a = 0, ct = 0;
+		int xmaxval = 0;//finding local f(xmax)
+
+		for (int j = bpt; j < nxtpt && j <mtn.cols; ++j) {
+			if (g[j] > xmaxval) {
+				xmaxval = g[j];
+			}
+		}
+
+		
+		if (xmaxval > xgmval / 10) {//thresholding hist, if not enough black pixels set box as unused
+			xmaxval /= 10; //thresholding localhist
+			for (int j = bpt; j < nxtpt && j < mtn.cols; ++j) {
+				if(g[j] - xmaxval > 0){
+				a += j;
+				++ct;
+				}
+			}
+
+			xpicslist[i] = (int)std::round((float)a/ ct);//finding center mass in x absciss
+			bpt = xpicslist[i] + (d.R_PARAMS.X_SIZE+ d.R_PARAMS.RECT_MARGIN)/ 2;//thinking this value is ceneter of givven box with letter trying to compensate params for better recognizing
+		}
+		else {
+			xpicslist[i] = -1;
+			bpt = nxtpt;
+		}
+		ac = 0;
+	}
+
+	extrdata ed;
+
+	int* gy = new int[mtn.rows];
+
+	for (int i = 0; i < xpicslist.size(); ++i) {
+
+		if (xpicslist[i] == -1) {
+			ed.imgs.push_back(cv::Mat());
+			continue;
+		}
+
+		for (int j = 0; j < mtn.rows; ++j) {
+			gy[j] = 0;
+		}
+
+		int begp = xpicslist[i] - d.R_PARAMS.X_SIZE / 2;
+		if (begp < 0) begp = 0;
+		int endp = xpicslist[i] + d.R_PARAMS.X_SIZE / 2;
+		if (endp > mtn.cols ) endp = mtn.cols;
+
+		int maxvy = 0;
+		//calculating local y absciss hist
+		for (int j = 0; j < mtn.rows; ++j) {
+			for (int k = begp; k < endp; ++k) {
+				if (mtn.at<uchar>(j, k) == 0) gy[j]++;
+			}
+			if (gy[j] > maxvy) maxvy = gy[j];
+		}
+
+		maxvy /= 10;//thresholding it
+		int a = 0, ct = 0;
+		for (int j = 0; j < mtn.rows; ++j) {
+			if (gy[j] - maxvy > 0) {
+				a += j; ++ct;
+			}
+		}
+		int cp = (int)std::round((float)a / ct);//finding y masscenter to compensate y aditional space
+		int yb = cp - d.R_PARAMS.Y_SIZE / 2;
+		int ye = cp + d.R_PARAMS.Y_SIZE / 2;
+		if (yb < 0) {
+			ye -= yb;
+			yb = 0;
+		}
+		if (ye > mtn.rows) {
+			yb += ye - mtn.rows;
+			ye = mtn.rows;
+			if (yb < 0) yb = 0;
+		}
+
+#ifdef MODULAR_TEST_DATAEXTRACTOR
+		cv::line(modular_test_matrix, cv::Point(xpicslist[i] + r.x, r.y + yb), cv::Point(r.x + xpicslist[i], r.y + ye), cv::Scalar(0), 1);
+		cv::line(modular_test_matrix, cv::Point(r.x+begp, r.y + cp), cv::Point(r.x +endp, r.y + cp), cv::Scalar(0), 1);
+#endif // MODULAR_TEST_DATAEXTRACTOR
+
+		auto f = mtn(cv::Rect(cv::Point(begp, yb), cv::Point(endp, ye)));
+		cv::Mat r; f.copyTo(r);
+		ed.imgs.push_back(r);
+	}
+
+	ed.dtype = d.DATA_TYPE;
+	ed.name = d.dname;
+
+	delete[] gy;
+	delete[] g;
+	return ed;
+}
+
+
 
 std::vector<extrdata> rtr::DataExtractor::data_extract(const cv::Mat& t){
 	cv::Mat vm = t;
@@ -173,8 +303,21 @@ std::vector<extrdata> rtr::DataExtractor::data_extract(const cv::Mat& t){
 	auto r = _corner_marker_pos_detector(vm);//finding corner markers
 	_geom_wrap_prespective(vm, r);//wraping perspective
 	_geom_restore(vm);// restoring position in space
-	cv::imwrite("afd" + std::to_string(gdsf++)+".jpg", vm);
-	return std::vector<extrdata>();
+
+#ifdef MODULAR_TEST_DATAEXTRACTOR
+modular_test_matrix = vm;
+#endif // MODULAR_TEST_DATAEXTRACTOR
+
+	std::vector<extrdata> ed;
+
+	for (int i = 0; i < imgparams.d_data.size(); ++i) {
+		auto r = _data_extract(vm, imgparams.d_data[i]);
+		ed.push_back(r);
+	}
+#ifdef MODULAR_TEST_DATAEXTRACTOR
+	modular_test_callback();
+#endif // MODULAR_TEST_DATAEXTRACTOR
+	return ed;
 }
 
 

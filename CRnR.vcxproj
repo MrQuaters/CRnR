@@ -149,6 +149,7 @@
   <ItemGroup>
     <ClCompile Include="modules\dataextractor\dataextractor.cpp" />
     <ClCompile Include="modules\dataextractor\imgtemplate.cpp" />
+    <ClCompile Include="modules\dataextractor\modualartestDE.cpp" />
     <ClCompile Include="test.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
