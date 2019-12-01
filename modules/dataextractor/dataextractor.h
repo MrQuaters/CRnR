@@ -6,7 +6,7 @@
 #include <iostream>
 #include <ctime>
 #include "imgtemplate.h"
-#define MODULAR_TEST_DATAEXTRACTOR
+//#define MODULAR_TEST_DATAEXTRACTOR
 
 namespace rtr{
 

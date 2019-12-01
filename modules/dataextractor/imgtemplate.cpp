@@ -5,6 +5,9 @@ int rtr::ImgTemplate::cm_to_pix(double cm){
 	return std::round(cm * (double)DPI / 2.54);
 }
 
+int cm_to_pix_s(double cm) {
+	return std::round(cm * 250.0 / 2.54);
+}
 
 
 rtr::TestImgTemplate::TestImgTemplate(int dpi){
@@ -15,13 +18,13 @@ rtr::TestImgTemplate::TestImgTemplate(int dpi){
 	MARKER_WIDTH_PIX = cm_to_pix(0.61);
 	IMAGE_TYPE = SCANED_IMAGE;
 	GEOM_MARKER_POS_Y_PIX = cm_to_pix(10.5);
-	MARKER_TO_MARKER_WIDTH_PIX = cm_to_pix(20.2184);
-	MARKER_TO_MARKER_HEIGHT_PIX = cm_to_pix(13.818);
+	MARKER_TO_MARKER_WIDTH_PIX = cm_to_pix_s(20.2184);
+	MARKER_TO_MARKER_HEIGHT_PIX = cm_to_pix_s(13.818);
 	LETTER_WIDTH_PIX = cm_to_pix(0.05);
-	FREE_ZONE_PIX = cm_to_pix(0.2614);
+	FREE_ZONE_PIX = cm_to_pix_s(0.2614);
 	d_data = {
-		data_for_detect(cm_to_pix(3.23),cm_to_pix(4.6), 11, cm_to_pix(0.55), cm_to_pix(0.71),cm_to_pix(0.12), IS_NUMBERS, "TELEPHON"),
-		data_for_detect(cm_to_pix(3.23),cm_to_pix(3.6808), 26, cm_to_pix(0.55), cm_to_pix(0.71),cm_to_pix(0.12), IS_TEXT, "otc")
+		data_for_detect(cm_to_pix_s(3.23),cm_to_pix_s(4.6), 11, cm_to_pix_s(0.55), cm_to_pix_s(0.71),cm_to_pix_s(0.12), IS_NUMBERS, "TELEPHON"),
+		data_for_detect(cm_to_pix_s(3.23),cm_to_pix_s(3.6808), 26, cm_to_pix_s(0.55), cm_to_pix_s(0.71),cm_to_pix_s(0.12), IS_TEXT, "otc")
 	};
 }
 

@@ -9,10 +9,38 @@ DataExtractor::DataExtractor(const ImgTemplate* t) noexcept {
 	imgparams = *t;
 }
 
+void _miniotsu(cv::Mat& t) {
+	cv::threshold(t, t, 0, 255, cv::THRESH_BINARY | cv::THRESH_OTSU);
+}
+
 
 void DataExtractor::_binarise(cv::Mat& t){ //binirasing by OTSU thresholding
 	cv::GaussianBlur(t, t, cv::Size(5, 5), 0);
-	cv::threshold(t, t, 0, 255, cv::THRESH_BINARY|cv::THRESH_OTSU);
+	int stepx = t.cols / 2;
+	int stepy = t.rows / 2;
+	cv::Mat r;
+	t.copyTo(r);
+	for (int i = 1; i <= 2; ++i) {
+		int clx = (i - 1) * stepx;
+		int clx_ = i * stepx;
+		if (i == 2) clx_ = t.cols;
+		for (int j = 1; j <= 2; ++j) {
+			int cly = (j - 1) * stepy;
+			int cly_ = j * stepy;
+			if (j == 2) cly_ = t.rows;
+			auto f = t(cv::Rect(cv::Point(clx, cly), cv::Point(clx_, cly_)));
+			_miniotsu(f);
+			int cx = clx;
+			for (int k = 0; k < f.cols; ++k) {
+				int cp = cly;
+				for (int o = 0; o < f.rows; ++o) {
+					r.at<uchar>(cp++, cx) = f.at<uchar>(o, k);
+				}
+				++cx;
+			}
+		}
+	}
+	r.copyTo(t);
 }
 
 void DataExtractor::_geom_restore(cv::Mat& g){ //restoring geometry if no geom marker in setted position, should rotate image
@@ -170,7 +198,7 @@ extrdata DataExtractor::_data_extract(cv::Mat& mt, const data_for_detect& d){
 	r.y = d.DATA_POS_Y_PIX - imgparams.FREE_ZONE_PIX / 2;
 	r.width = d.R_PARAMS.R_COUNTS * d.R_PARAMS.X_SIZE + (d.R_PARAMS.R_COUNTS-1) * d.R_PARAMS.RECT_MARGIN + imgparams.FREE_ZONE_PIX/2;
 	r.height = d.R_PARAMS.Y_SIZE + imgparams.FREE_ZONE_PIX/2;
-	if (r.x + r.width > mt.cols) r.width = mt.cols - r.x;
+	if (r.x + r.width > mt.cols) r.width = mt.cols - r.x-1;
 	
 #ifdef MODULAR_TEST_DATAEXTRACTOR
 	cv::rectangle(modular_test_matrix, r, cv::Scalar(0), 1);
@@ -208,8 +236,8 @@ extrdata DataExtractor::_data_extract(cv::Mat& mt, const data_for_detect& d){
 		}
 
 		
-		if (xmaxval > xgmval / 10) {//thresholding hist, if not enough black pixels set box as unused
-			xmaxval /= 10; //thresholding localhist
+		if (xmaxval > xgmval / 8) {//thresholding hist, if not enough black pixels set box as unused
+			xmaxval /= 8; //thresholding localhist
 			for (int j = bpt; j < nxtpt && j < mtn.cols; ++j) {
 				if(g[j] - xmaxval > 0){
 				a += j;
@@ -256,7 +284,7 @@ extrdata DataExtractor::_data_extract(cv::Mat& mt, const data_for_detect& d){
 			if (gy[j] > maxvy) maxvy = gy[j];
 		}
 
-		maxvy /= 10;//thresholding it
+		maxvy /= 8;//thresholding it
 		int a = 0, ct = 0;
 		for (int j = 0; j < mtn.rows; ++j) {
 			if (gy[j] - maxvy > 0) {
@@ -305,7 +333,7 @@ std::vector<extrdata> rtr::DataExtractor::data_extract(const cv::Mat& t){
 	_geom_restore(vm);// restoring position in space
 
 #ifdef MODULAR_TEST_DATAEXTRACTOR
-modular_test_matrix = vm;
+vm.copyTo(modular_test_matrix);
 #endif // MODULAR_TEST_DATAEXTRACTOR
 
 	std::vector<extrdata> ed;
@@ -317,6 +345,7 @@ modular_test_matrix = vm;
 #ifdef MODULAR_TEST_DATAEXTRACTOR
 	modular_test_callback();
 #endif // MODULAR_TEST_DATAEXTRACTOR
+	
 	return ed;
 }
 
