@@ -187,8 +187,40 @@ void DataExtractor::_geom_wrap_prespective(cv::Mat& mt, _corners cn){//wraping p
 	cv::warpPerspective(mt, mt, hg, cv::Size2i(imgparams.MARKER_TO_MARKER_WIDTH_PIX, imgparams.MARKER_TO_MARKER_HEIGHT_PIX));
 }
 
+void DataExtractor::_resize(cv::Mat& a){
+	cv::Size r;
+	r.width = imgparams.MARKER_TO_MARKER_WIDTH_PIX_TO_250dpi;
+	r.height = imgparams.MARKER_TO_MARKER_HEIGHT_PIX_TO_250dpi;
+	cv::resize(a, a, r);
+}
+
 void DataExtractor::_final_binarisation(cv::Mat& t){
 	cv::adaptiveThreshold(t, t, 255, cv::THRESH_BINARY, cv::ADAPTIVE_THRESH_GAUSSIAN_C, 3, 0);
+}
+
+
+int _pointfnd(int* g, int ct, int thresh) {
+	int xmaxval = 0;
+	int xmax = 0;
+	unsigned long long summ = 0;
+	for (int j = 0; j < ct; ++j) {
+		summ += g[j];
+		if (g[j] > xmaxval) {
+			xmaxval = g[j];
+			xmax = j;
+		}
+	}
+	summ /= 2;
+
+	if (xmaxval < thresh) return -1;
+	unsigned long long summ_ = 0;
+	
+	for (int j = 0; j < ct; ++j) {
+		summ_ += g[j];
+		if (summ_ >= summ) return j;
+	}
+
+	return -1;
 }
 
 
@@ -196,7 +228,7 @@ extrdata DataExtractor::_data_extract(cv::Mat& mt, const data_for_detect& d){
 	cv::Rect2i r;
 	r.x = d.DATA_POS_X_PIX - imgparams.FREE_ZONE_PIX / 2; 
 	r.y = d.DATA_POS_Y_PIX - imgparams.FREE_ZONE_PIX / 2;
-	r.width = d.R_PARAMS.R_COUNTS * d.R_PARAMS.X_SIZE + (d.R_PARAMS.R_COUNTS-1) * d.R_PARAMS.RECT_MARGIN + imgparams.FREE_ZONE_PIX/2;
+	r.width = d.R_PARAMS.R_COUNTS * d.R_PARAMS.X_SIZE + (d.R_PARAMS.R_COUNTS-1) * d.R_PARAMS.RECT_MARGIN + imgparams.FREE_ZONE_PIX;
 	r.height = d.R_PARAMS.Y_SIZE + imgparams.FREE_ZONE_PIX/2;
 	if (r.x + r.width > mt.cols) r.width = mt.cols - r.x-1;
 	
@@ -222,35 +254,19 @@ extrdata DataExtractor::_data_extract(cv::Mat& mt, const data_for_detect& d){
 	int nxtpt = 0;
 	int ac = (imgparams.FREE_ZONE_PIX - d.R_PARAMS.RECT_MARGIN) / 2;
 	int bpt = 0;
-	std::vector<int> xpicslist(d.R_PARAMS.R_COUNTS, 0);
+	std::vector<int> xpicslist(d.R_PARAMS.R_COUNTS, -1);
 	
 	for (int i = 0; i < d.R_PARAMS.R_COUNTS; ++i) {//foreach lettter
-		nxtpt = bpt + d.R_PARAMS.X_SIZE + d.R_PARAMS.RECT_MARGIN + ac;//next step calc by last step
-		int a = 0, ct = 0;
-		int xmaxval = 0;//finding local f(xmax)
-
-		for (int j = bpt; j < nxtpt && j <mtn.cols; ++j) {
-			if (g[j] > xmaxval) {
-				xmaxval = g[j];
-			}
+		int rng = d.R_PARAMS.X_SIZE + d.R_PARAMS.RECT_MARGIN + ac;
+		nxtpt = bpt + rng;//next step calc by last step
+		if (nxtpt > mtn.cols) rng = mtn.cols - bpt;
+		int rp = _pointfnd(&g[bpt], rng, xgmval / 8);
+		if (rp != -1) {
+			xpicslist[i] = bpt + rp;
+			bpt = xpicslist[i] + (d.R_PARAMS.X_SIZE + d.R_PARAMS.RECT_MARGIN) / 2; 
 		}
-
-		
-		if (xmaxval > xgmval / 8) {//thresholding hist, if not enough black pixels set box as unused
-			xmaxval /= 8; //thresholding localhist
-			for (int j = bpt; j < nxtpt && j < mtn.cols; ++j) {
-				if(g[j] - xmaxval > 0){
-				a += j;
-				++ct;
-				}
-			}
-
-			xpicslist[i] = (int)std::round((float)a/ ct);//finding center mass in x absciss
-			bpt = xpicslist[i] + (d.R_PARAMS.X_SIZE+ d.R_PARAMS.RECT_MARGIN)/ 2;//thinking this value is ceneter of givven box with letter trying to compensate params for better recognizing
-		}
-		else {
-			xpicslist[i] = -1;
-			bpt = nxtpt;
+		else { 
+			bpt = nxtpt; 
 		}
 		ac = 0;
 	}
@@ -279,19 +295,18 @@ extrdata DataExtractor::_data_extract(cv::Mat& mt, const data_for_detect& d){
 		//calculating local y absciss hist
 		for (int j = 0; j < mtn.rows; ++j) {
 			for (int k = begp; k < endp; ++k) {
-				if (mtn.at<uchar>(j, k) == 0) gy[j]++;
+				if (mtn.at<uchar>(j, k) == 0) ++gy[j];
 			}
 			if (gy[j] > maxvy) maxvy = gy[j];
 		}
 
-		maxvy /= 8;//thresholding it
-		int a = 0, ct = 0;
-		for (int j = 0; j < mtn.rows; ++j) {
-			if (gy[j] - maxvy > 0) {
-				a += j; ++ct;
-			}
+		int cp = _pointfnd(gy, mtn.rows, maxvy / 8);//finding y masscenter to compensate y aditional space
+		if (cp == -1) {
+			ed.imgs.push_back(cv::Mat());
+			continue;
 		}
-		int cp = (int)std::round((float)a / ct);//finding y masscenter to compensate y aditional space
+
+		
 		int yb = cp - d.R_PARAMS.Y_SIZE / 2;
 		int ye = cp + d.R_PARAMS.Y_SIZE / 2;
 		if (yb < 0) {
@@ -331,6 +346,8 @@ std::vector<extrdata> rtr::DataExtractor::data_extract(const cv::Mat& t){
 	auto r = _corner_marker_pos_detector(vm);//finding corner markers
 	_geom_wrap_prespective(vm, r);//wraping perspective
 	_geom_restore(vm);// restoring position in space
+
+	if (imgparams.setted_to_250) _resize(vm);
 
 #ifdef MODULAR_TEST_DATAEXTRACTOR
 vm.copyTo(modular_test_matrix);

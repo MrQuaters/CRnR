@@ -6,7 +6,7 @@
 #include <iostream>
 #include <ctime>
 #include "imgtemplate.h"
-//#define MODULAR_TEST_DATAEXTRACTOR
+#define MODULAR_TEST_DATAEXTRACTOR
 
 namespace rtr{
 
@@ -30,6 +30,7 @@ class DataExtractor {
 	_corners _corner_marker_pos_detector(const  cv::Mat&); //returning corner markers positions
 	cv::Point2i _mfinder(const cv::Mat&, int* ct = nullptr); // function for _corner_marker_pos_detector finding center mass max black pixelex in given mat(optimal alhorithm)
 	void _geom_wrap_prespective(cv::Mat&, _corners); // wraping perspective based on finded markers
+	void _resize(cv::Mat&);
 	void _final_binarisation(cv::Mat&);
 	extrdata _data_extract(cv::Mat&, const data_for_detect&);
 

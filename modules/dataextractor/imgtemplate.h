@@ -31,6 +31,9 @@ public:
 	int DPI;
 	int MARKER_TO_MARKER_WIDTH_PIX;//PIX BETWEEN 2 CORNERS MARKERS needed for final geom transform
 	int MARKER_TO_MARKER_HEIGHT_PIX;
+	int MARKER_TO_MARKER_WIDTH_PIX_TO_250dpi;//PIX BETWEEN 2 CORNERS MARKERS needed for final geom transform bormaliseed for better perfomance
+	int MARKER_TO_MARKER_HEIGHT_PIX_TO_250dpi;
+	bool setted_to_250;
 	int BORDER_WIDTH_PIX;// not used
 	int MARKER_WHITESPACE_WIDTH_PIX;//white window where marker placed... no text in area
 	int MARKER_WHITESPACE_HEIGHT_PIX;

@@ -1,7 +1,7 @@
 #include "modules/dataextractor/dataextractor.h"
 
 int main() {
-	rtr::TestImgTemplate g(250);
+	rtr::TestImgTemplate g(300);
 	rtr::DataExtractor u(&g);
 	
 	for (int i = 1; i < 8; ++i) {
