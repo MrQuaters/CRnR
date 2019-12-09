@@ -8,13 +8,13 @@ static cv::Mat smat;
 void rtr::DataExtractor::modular_test_callback() {
 	smat = modular_test_matrix;
 }
-
+const int IMG_COUNT = 11;
 int main() {
 
 	rtr::TestImgTemplate g(300);
 	rtr::DataExtractor u(&g);
 
-	for (int i = 1; i < 10; ++i) {
+	for (int i = 1; i < IMG_COUNT; ++i) {
 		auto r = cv::imread("imforproc/" + std::to_string(i) + ".jpg", cv::IMREAD_GRAYSCALE);
 		auto t1 = clock() / (float)CLOCKS_PER_SEC; 
 		auto x = u.data_extract(r, true);
